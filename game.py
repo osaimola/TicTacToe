@@ -9,8 +9,8 @@ class Game:
     # set initial state of game with no plays
     def initialize_game(self):
         self.current_state = [[".", ".", "."],
-        [".", ".", "."],
-        [".", ".", "."]]
+                              [".", ".", "."],
+                              [".", ".", "."]]
 
         #player x will get first turn
         self.player_turn = "X"
@@ -71,27 +71,23 @@ class Game:
         return '.'
 
 
-    # Player 'O' is max, in this case AI
-    def max(self):
-
-        # Possible values for maxv are:
-        # -1 - loss
+    def optimize(self, mx):
+        
+        # mx is multiplier +ve for max and -ve for min
+        # Possible values for minv are:
+        # -1 - win
         # 0  - a tie
-        # 1  - win
+        # 1  - loss
 
-        # We're initially setting it to -2 as worse than the worst case:
-        maxv = -2
+        # We're initially setting it to worse than the worst case:
+        # 2 for min and -2 for max
+        optimalv = (-2 * mx)
 
         px = None
         py = None
 
         result = self.is_end()
 
-        # If the game came to an end, the function needs to return
-        # the evaluation function of the end. That can be:
-        # -1 - loss
-        # 0  - a tie
-        # 1  - win
         if result == 'X':
             return (-1, 0, 0)
         elif result == 'O':
@@ -102,56 +98,22 @@ class Game:
         for i in range(0, 3):
             for j in range(0, 3):
                 if self.current_state[i][j] == '.':
-                    # On the empty field player 'O' makes a move and calls Min
+                    if mx < 0: self.current_state[i][j] = 'X'
+                    if mx > 0: self.current_state[i][j] = 'O'
+                    # On the empty field player 'O' makes a move and calls optimize with a -ve mx value (min)
                     # That's one branch of the game tree.
-                    self.current_state[i][j] = 'O'
-                    (m, min_i, min_j) = self.min()
-                    # Fixing the maxv value if needed
-                    if m > maxv:
-                        maxv = m
+                    # the next turn, we reverse the mx sign to switch from max to min to max
+                    (m, opt_i, opt_j) = self.optimize(-mx)
+                    
+                    # only update values if we are calculating max and value is greater
+                    # or if we are minimizing and value is less
+                    if (mx == 1 and m > optimalv) or (mx == -1 and m < optimalv):
+                        optimalv = m
                         px = i
                         py = j
-                    # Setting back the field to empty
-                    self.current_state[i][j] = '.'
-        return (maxv, px, py)
-
-
-    # Player 'X' is min, in this case human
-    def min(self):
-
-        # Possible values for minv are:
-        # -1 - win
-        # 0  - a tie
-        # 1  - loss
-
-        # We're initially setting it to 2 as worse than the worst case:
-        minv = 2
-
-        qx = None
-        qy = None
-
-        result = self.is_end()
-
-        if result == 'X':
-            return (-1, 0, 0)
-        elif result == 'O':
-            return (1, 0, 0)
-        elif result == '.':
-            return (0, 0, 0)
-
-        for i in range(0, 3):
-            for j in range(0, 3):
-                if self.current_state[i][j] == '.':
-                    self.current_state[i][j] = 'X'
-                    (m, max_i, max_j) = self.max()
-                    if m < minv:
-                        minv = m
-                        qx = i
-                        qy = j
                     self.current_state[i][j] = '.'
 
-        return (minv, qx, qy)
-
+        return (optimalv, px, py)
 
     def play(self):
         while True:
@@ -170,13 +132,13 @@ class Game:
                 self.initialize_game()
                 return
 
-            # If it's player's turn
+            # If it's player's turn, optimize for min
             if self.player_turn == 'X':
 
                 while True:
 
                     start = time.time()
-                    (m, qx, qy) = self.min()
+                    (m, qx, qy) = self.optimize(-1)
                     end = time.time()
                     print('Evaluation time: {}s'.format(round(end - start, 7)))
                     print('Recommended move: X = {}, Y = {}'.format(qx, qy))
@@ -193,9 +155,9 @@ class Game:
                     else:
                         print('The move is not valid! Try again.')
 
-            # If it's AI's turn
+            # If it's AI's turn, optimize for max
             else:
-                (m, px, py) = self.max()
+                (m, px, py) = self.optimize(1)
                 self.current_state[px][py] = 'O'
                 self.player_turn = 'X'
 
