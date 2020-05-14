@@ -71,7 +71,7 @@ class Game:
         return '.'
 
 
-    def optimize(self, mx):
+    def optimize(self, mx, alpha, beta):
         
         # mx is multiplier +ve for max and -ve for min
         # Possible values for minv are:
@@ -103,7 +103,7 @@ class Game:
                     # On the empty field player 'O' makes a move and calls optimize with a -ve mx value (min)
                     # That's one branch of the game tree.
                     # the next turn, we reverse the mx sign to switch from max to min to max
-                    (m, opt_i, opt_j) = self.optimize(-mx)
+                    (m, opt_i, opt_j) = self.optimize(-mx, alpha, beta)
                     
                     # only update values if we are calculating max and value is greater
                     # or if we are minimizing and value is less
@@ -112,6 +112,12 @@ class Game:
                         px = i
                         py = j
                     self.current_state[i][j] = '.'
+
+                    if (mx == 1 and optimalv >= beta) or (mx == -1 and optimalv <= alpha): return (optimalv, px, py)
+                    
+                    if (mx == 1 and optimalv > alpha): alpha = optimalv
+                    if (mx == -1 and optimalv < beta): beta = optimalv
+
 
         return (optimalv, px, py)
 
@@ -132,13 +138,13 @@ class Game:
                 self.initialize_game()
                 return
 
-            # If it's player's turn, optimize for min
+            # If it's player's turn, optimize for min & set alpha beta to worst case scenarios
             if self.player_turn == 'X':
 
                 while True:
 
                     start = time.time()
-                    (m, qx, qy) = self.optimize(-1)
+                    (m, qx, qy) = self.optimize(-1, -2, 2)
                     end = time.time()
                     print('Evaluation time: {}s'.format(round(end - start, 7)))
                     print('Recommended move: X = {}, Y = {}'.format(qx, qy))
@@ -155,9 +161,9 @@ class Game:
                     else:
                         print('The move is not valid! Try again.')
 
-            # If it's AI's turn, optimize for max
+            # If it's AI's turn, optimize for max & set alpha beta to worst case scenarios
             else:
-                (m, px, py) = self.optimize(1)
+                (m, px, py) = self.optimize(1, -2, 2)
                 self.current_state[px][py] = 'O'
                 self.player_turn = 'X'
 
